@@ -1,0 +1,75 @@
+name: Scoring code quality
+
+on:
+  push:
+    branches:
+      - feedback
+  workflow_dispatch:
+
+jobs:
+  score-code:
+    runs-on: ${{ matrix.os }}-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        os: ["ubuntu"]
+    continue-on-error: true
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set up micromamba
+      uses: mamba-org/setup-micromamba@v2
+      with:
+        micromamba-version: "latest"
+        environment-file: environment.yml
+        environment-name: nlp-final
+        cache-environment: true
+        cache-downloads: true
+
+    - name: Show interpreter (sanity check)
+      shell: bash
+      run: |
+        micromamba run -n nlp-final python -V
+        micromamba run -n nlp-final which python        
+
+    - name: Install extra tools inside the env (grader deps)
+      shell: bash
+      run: |
+        micromamba run -n nlp-final python -m pip install --upgrade pip
+        ls -la .
+        # If requirements.txt exists, install it INTO THE ENV
+        if [ -f requirements.txt ]; then
+          micromamba run -n nlp-final python -m pip install -r requirements.txt
+        fi
+        # Grader's own deps (kept minimal)
+        micromamba run -n nlp-final python -m pip install pylint
+        
+    - name: Check code quality
+      id: linting
+      run: |
+        MESSAGE=$(pylint -ry $(git ls-files '*.py') ||:)
+
+        echo 'MESSAGE<<EOF' >> $GITHUB_ENV
+        echo "<pre><code>$MESSAGE</code></pre>" >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
+
+        echo "Printing PR message: $MESSAGE"
+
+    - name: Post report to pull request
+      uses: mshick/add-pr-comment@v2
+      with:
+        message: ${{ env.MESSAGE }}
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check for reproducibility
+      run: |
+        micromamba run -n nlp-final python main.py
