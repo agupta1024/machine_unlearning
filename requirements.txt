@@ -1,1 +1,12 @@
-
+transformers
+peft
+torch
+datasets
+matplotlib
+seaborn
+wandb
+rouge_score
+huggingface_hub
+bitsandbytes
+unsloth
+trl<0.20.0
