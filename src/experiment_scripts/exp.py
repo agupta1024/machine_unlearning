@@ -1,6 +1,6 @@
 """Main entrypoint for TOFU unlearning experiments."""
 
-# pylint: disable=too-many-locals,too-many-statements,too-many-branches
+# pylint: disable=too-many-locals,too-many-statements
 
 import argparse
 import os
@@ -15,7 +15,6 @@ from src.dataset.dataset import DatasetManager, SpanAwareCollator
 from src.model.builder import ModelBuilder
 from src.model.train import ModelTrainer
 
-# os.environ['GITHUB_ACTIONS'] = 'true'
 def main():
     """Run training, unlearning, and evaluation for one configured dataset split."""
     torch.cuda.empty_cache()
@@ -83,18 +82,14 @@ def main():
     unlearning_rate = args.ulr
     num_epochs_train_oracle = args.num_epochs
     num_epochs_train_student = args.ul_epochs
-    train_oracle = not args.load_pretrained
-    run_unlearning = args.run_unlearn
 
     if os.getenv("GITHUB_ACTIONS") == "true":
-        train_oracle = True
-        run_unlearning = True
         num_epochs_train_oracle = 1
         num_epochs_train_student = 1
 
     if os.getenv("GITHUB_ACTIONS") == "true":
         os.environ["WANDB_MODE"] = "disabled"
-
+    os.environ["WANDB_MODE"] = "disabled"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ds_manager_obj = DatasetManager(padding="longest", max_length=1024)
     print("Fetching datasets...")
@@ -110,21 +105,16 @@ def main():
             model_short = "4bit"
         else:
             model_short = "8bit"
-        model_short = "16bit"
         print(f"Loading model in {model_short} precision...")
         if args.train_with_npo_loss:
             tuned_model_path = "./finetuned_adapter/llama-3.2-1B-" + model_short + f"-{i}-npo_loss"
-        elif args.train_with_ga_loss:
-            tuned_model_path = "./finetuned_adapter/llama-3.2-1B-" + model_short + f"-{i}-ga_loss"
         else:
             tuned_model_path = "./finetuned_adapter/llama-3.2-1B-" + model_short + f"-{i}"
-
-        oracle_path= f"./oracle_adapter_hf"
+        tuned_model_path = "./Lora_model/TOFU/llama1b_ga_loss_finetuned_r64_3e-5_20ex_1"
+        oracle_path= "./oracle_adapter_hf"
         if args.load_pretrained:
-            builder = ModelBuilder(load_in_4bit=args.load_in_4bit,
-                                   load_model=args.load_pretrained_model,
-                                   oracle_path=oracle_path,
-                                   tuned_model_path=tuned_model_path)
+            builder = ModelBuilder(load_in_4bit=args.load_in_4bit, load_model=args.load_pretrained_model,
+                                   oracle_path=oracle_path, tuned_model_path=tuned_model_path)
         else:
             builder = ModelBuilder(load_in_4bit=args.load_in_4bit)
         model, tokenizer = builder.get_model_and_tokenizer()
@@ -166,84 +156,83 @@ def main():
             oversampling_factor = 20
         print("Preparing datasets...")
         oversampled_forget_list = forget_prompts[:num_forget_ex] * oversampling_factor
-        forget_dataset = ds_manager_obj.tokenize_data(oversampled_forget_list)
-        retain_dataset = ds_manager_obj.tokenize_data(retain_prompts_list[i][:num_retain_ex])
+        # forget_dataset = ds_manager_obj.tokenize_data(oversampled_forget_list)
+        # retain_dataset = ds_manager_obj.tokenize_data(retain_prompts_list[i][:num_retain_ex])
 
-        oracle_dataset = concatenate_datasets([forget_dataset, retain_dataset])
-        sft_dataset = oracle_dataset.remove_columns(["pii_spans", "offset_mapping"])
-        sft_dataset = sft_dataset.shuffle(seed=42)
-        retain_prompts = retain_prompts_list[i][:num_retain_ex]
-        custom_collator = SpanAwareCollator(tokenizer=tokenizer)
-        forget_dataloader = DataLoader(
-            forget_dataset,
-            batch_size=4,
-            shuffle=False,
-            collate_fn=custom_collator,
-            pin_memory=True,
-            num_workers=4,
-            prefetch_factor=2,
-            persistent_workers=True,
-        )
-        retain_dataloader = DataLoader(
-            retain_dataset,
-            batch_size=4,
-            shuffle=True,
-            collate_fn=custom_collator,
-            pin_memory=True,
-            num_workers=4,
-            prefetch_factor=2,
-            persistent_workers=True,
-        )
+        # oracle_dataset = concatenate_datasets([forget_dataset, retain_dataset])
+        # sft_dataset = oracle_dataset.remove_columns(["pii_spans", "offset_mapping"])
+        # sft_dataset = sft_dataset.shuffle(seed=42)
+        # retain_prompts = retain_prompts_list[i][:num_retain_ex]
+        # custom_collator = SpanAwareCollator(tokenizer=tokenizer)
+        # forget_dataloader = DataLoader(
+        #     forget_dataset,
+        #     batch_size=4,
+        #     shuffle=False,
+        #     collate_fn=custom_collator,
+        #     pin_memory=True,
+        #     num_workers=4,
+        #     prefetch_factor=2,
+        #     persistent_workers=True,
+        # )
+        # retain_dataloader = DataLoader(
+        #     retain_dataset,
+        #     batch_size=4,
+        #     shuffle=True,
+        #     collate_fn=custom_collator,
+        #     pin_memory=True,
+        #     num_workers=4,
+        #     prefetch_factor=2,
+        #     persistent_workers=True,
+        # )
 
-        ul_training_params = {
-            "forget_ds": forget_dataloader,
-            "retain_ds": retain_prompts,
-            "gk_prompts": gk_prompts,
-            "ul_epochs": num_epochs_train_student,
-            "ulr": unlearning_rate,
-            "forget_loss_wt": args.lambda_forget,
-            "retain_loss_wt": args.lambda_retain,
-            "gk_loss_wt": args.lambda_gk,
-            "finetuned_model_dir": tuned_model_path,
-        }
-        print("Training oracle and student models...")
-        trainer_obj = ModelTrainer(model, tokenizer, ul_training_params)
-        if train_oracle:
-            trainer_obj.train_oracle(sft_dataset, num_epochs_train_oracle, learning_rate)
-            builder.add_adapter_to_base_model()
+        # ul_training_params = {
+        #     "forget_ds": forget_dataloader,
+        #     "retain_ds": retain_prompts,
+        #     "gk_prompts": gk_prompts,
+        #     "ul_epochs": num_epochs_train_student,
+        #     "ulr": unlearning_rate,
+        #     "forget_loss_wt": args.lambda_forget,
+        #     "retain_loss_wt": args.lambda_retain,
+        #     "gk_loss_wt": args.lambda_gk,
+        #     "finetuned_model_dir": tuned_model_path,
+        # }
+        # print("Training oracle and student models...")
+        # trainer_obj = ModelTrainer(model, tokenizer, ul_training_params)
+        # if not args.load_pretrained:
+        #     trainer_obj.train_oracle(sft_dataset, num_epochs_train_oracle, learning_rate)
+        #     builder.add_adapter_to_base_model()
 
-        if run_unlearning:
-            trainer_obj.train_student(npo_loss=args.train_with_npo_loss,
-                                      ga_loss=args.train_with_ga_loss)
+        # if args.run_unlearn:
+        #     trainer_obj.train_student(npo_loss=args.train_with_npo_loss, ga_loss=args.train_with_ga_loss)
 
         print("Evaluating on TOFU")
         tokenizer.padding_side = "left"
         eval_obj = EvaluationManager(
             model,
             tokenizer,
-            forget_dataloader,
+            None,
             fluency_ques_list,
             gk_prompts,
-            retain_dataloader,
+            None,
             device,
         )
         test_prompts = forget_prompts[:num_forget_ex]
 
-        response_logs = eval_obj.check_model_health(test_prompts)
-        oracle_response_logs = eval_obj.check_model_health(test_prompts, is_base_model=True)
-        eval_obj.dump_results_to_json(
-            response_logs,
-            oracle_response_logs,
-            filename_prefix=f"Llama-3.2-1B_{model_short}_{i}",
-        )
+        # response_logs = eval_obj.check_model_health(test_prompts)
+        # oracle_response_logs = eval_obj.check_model_health(test_prompts, is_base_model=True)
+        # eval_obj.dump_results_to_json(
+        #     response_logs,
+        #     oracle_response_logs,
+        #     filename_prefix=f"Llama-3.2-1B_{model_short}_{i}",
+        # )
         perplexity = eval_obj.get_perplexity(gk_prompts)
-        oracle_perplexity = eval_obj.get_perplexity(gk_prompts, is_base_model=True)
-        print(f"Oracle Model Perplexity on GK Prompts: {oracle_perplexity:.2f}")
+        # oracle_perplexity = eval_obj.get_perplexity(gk_prompts, is_base_model=True)
+        # print(f"Oracle Model Perplexity on GK Prompts: {oracle_perplexity:.2f}")
         print(f"Model {model_id} perplexity on GK prompts: {perplexity:.2f}")
 
-        curated_test = ds_manager_obj.load_text_prompts("./data/text_prompts.txt")
+        curated_test = ds_manager_obj.load_text_prompts(f"./data/TOFU/text_prompts_forget05.txt")
         eval_obj.calculate_mean_metrics(curated_test, is_base_model=False)
-        eval_obj.calculate_mean_metrics(curated_test, is_base_model=True)
+        # eval_obj.calculate_mean_metrics(curated_test, is_base_model=True)
 
 if __name__ == "__main__":
     main()

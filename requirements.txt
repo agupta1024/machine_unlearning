@@ -1,5 +1,5 @@
-transformers
-peft
+transformers==4.46.1
+peft==0.14.0
 torch
 datasets
 matplotlib
@@ -7,6 +7,8 @@ seaborn
 wandb
 rouge_score
 huggingface_hub
-bitsandbytes
-unsloth
-trl<0.20.0
+bitsandbytes==0.44.1
+
+bert-score
+spacy
+trl==0.12.2
