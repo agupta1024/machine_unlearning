@@ -46,19 +46,20 @@ class ModelBuilder:
         has_cuda = torch.cuda.is_available()
         bnb_config = None
 
-        # if has_cuda:
-        #     if load_in_4bit:
-        #         bnb_config = BitsAndBytesConfig(
-        #             load_in_4bit=True,
-        #             bnb_4bit_use_double_quant=True,
-        #             bnb_4bit_quant_type="nf4",
-        #             bnb_4bit_compute_dtype=torch.bfloat16
-        #         )
-        #     else:
-        #         bnb_config = BitsAndBytesConfig(
-        #             load_in_8bit=True,
-        #         )
+        if has_cuda:
+            if load_in_4bit:
+                bnb_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16
+                )
+            else:
+                bnb_config = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                )
         target_device = {"": torch.cuda.current_device()} if has_cuda else {"": "cpu"}
+
         # ==========================================
         # LOAD BASE MODEL & PREPARE
         # ==========================================
@@ -88,7 +89,7 @@ class ModelBuilder:
         if load_model == 'base':
             model = get_peft_model(model, self.peft_config, adapter_name="oracle")
         elif load_model == 'student':
-            model = PeftModel.from_pretrained(model, f"{tuned_model_path}",
+            model = PeftModel.from_pretrained(model, f"{tuned_model_path}/student",
                                               adapter_name="student")
         else:
             model = PeftModel.from_pretrained(model, oracle_path, adapter_name=load_model)

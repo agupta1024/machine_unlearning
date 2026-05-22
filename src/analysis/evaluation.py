@@ -66,7 +66,7 @@ class EvaluationManager:
                 pad_token_id=self.tokenizer.eos_token_id
             )
             new_tokens = generated_tokens[0][prefix_inputs['input_ids'].shape[1]:]
-            response = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
+            _ = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
             # print(f"Prefix: '{prefix}'")
             # print(f"-> Full Generation: {response.strip()}")
             # print(f"Comparing target ['{self.tokenizer.decode([target_first_token_id])}'] \

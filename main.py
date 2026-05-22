@@ -110,7 +110,6 @@ def main():
             model_short = "4bit"
         else:
             model_short = "8bit"
-        model_short = "16bit"
         print(f"Loading model in {model_short} precision...")
         if args.train_with_npo_loss:
             tuned_model_path = "./finetuned_adapter/llama-3.2-1B-" + model_short + f"-{i}-npo_loss"
@@ -119,7 +118,7 @@ def main():
         else:
             tuned_model_path = "./finetuned_adapter/llama-3.2-1B-" + model_short + f"-{i}"
 
-        oracle_path= f"./oracle_adapter_hf"
+        oracle_path= "./oracle_adapter_hf"
         if args.load_pretrained:
             builder = ModelBuilder(load_in_4bit=args.load_in_4bit,
                                    load_model=args.load_pretrained_model,

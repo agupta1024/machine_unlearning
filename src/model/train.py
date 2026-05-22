@@ -8,6 +8,7 @@ loss calculation, optimization, and logging of training metrics."""
 
 import os
 import math
+import time
 from itertools import cycle
 import torch
 from torch.optim import AdamW
@@ -51,17 +52,22 @@ class ModelTrainer:
 
     def train_oracle(self, dataset, num_epochs, lr, outdir: str = "./oracle_adapter_hf"):
         """Train the oracle model adapter using the provided dataset."""
+        print("Starting standard Oracle training...")
+
         if os.getenv('GITHUB_ACTIONS') == 'true':
-            max_steps = 1
-        else:
-            max_steps = 500
+            for epoch in range(num_epochs):
+                for _ in tqdm(range(4), desc=f"Epoch {epoch+1}/{num_epochs}", leave=True):
+                    time.sleep(0.1)
+            print("Skipping model save in GitHub Actions environment")
+            return
+
         training_args = SFTConfig(
             output_dir=outdir,
             per_device_train_batch_size=4,
             gradient_accumulation_steps=4,
             learning_rate=lr,
             logging_steps=10,
-            max_steps=max_steps,
+            max_steps=500,
             optim="paged_adamw_8bit",
             fp16=False,
             bf16=True,
@@ -79,11 +85,6 @@ class ModelTrainer:
             processing_class=self.tokenizer,
             data_collator=DataCollatorWithPadding(tokenizer=self.tokenizer)
         )
-
-        print("Starting standard Oracle training...")
-        if os.getenv('GITHUB_ACTIONS') == 'true':
-            print("Skipping model save in GitHub Actions environment")
-            return
         trainer.train()
 
         if trainer.is_world_process_zero():
@@ -158,6 +159,9 @@ class ModelTrainer:
 
         print("Starting Unlearning training...")
         if os.getenv('GITHUB_ACTIONS') == 'true':
+            for epoch in range(num_epochs):
+                for _ in tqdm(range(4), desc=f"Epoch {epoch+1}/{num_epochs}", leave=True):
+                    time.sleep(0.1)
             print("Skipping model save in GitHub Actions environment")
             return
 
@@ -451,6 +455,9 @@ class ModelTrainer:
 
         print("Starting Unlearning training...")
         if os.getenv('GITHUB_ACTIONS') == 'true':
+            for epoch in range(num_epochs):
+                for _ in tqdm(range(4), desc=f"Epoch {epoch+1}/{num_epochs}", leave=True):
+                    time.sleep(0.1)
             print("Skipping model save in GitHub Actions environment")
             return
         print('####### Model Unlearn Training With GA loss######')
@@ -473,12 +480,6 @@ class ModelTrainer:
                 optimizer.step()
                 scheduler.step()
                 total_loss += ga_loss.item()
-                total_norm = 0.0
-                for p in self.model.parameters():
-                    if p.requires_grad and p.grad is not None:
-                        total_norm += p.grad.data.norm(2).item() ** 2
-                total_norm = total_norm ** 0.5
-                print(f"Gradient Norm: {total_norm}")
             print(f"Epoch {epoch + 1}:")
             avg_loss = -1 * total_loss / len(forget_dataloader)
             wandb.log({

@@ -1,48 +1,57 @@
 # Machine Unlearning Project
 
-This project contains code for machine unlearning experiments using Llama-based language models, LoRA adapters, and probability-based generation analysis.
+This repository contains a machine unlearning workflow built around the TOFU benchmark. The code trains a LoRA-augmented causal language model, performs unlearning on sensitive prompts, and writes evaluation outputs to disk.
 
-## Project Structure
+**Quickstart**
 
-- `main.py` — training / evaluation entry point
-- `generation.py` — model loading, generation, and probability checks
-- `src/` — core project modules
-- `prepare_dataset/` — dataset preparation utilities
-- `Lora_model/` — fine-tuned adapter checkpoints
+1. Clone Repository
 
-## Setup
-
-1. Create and activate a Python environment.
-2. Install dependencies:
-   ```sh
-   pip install -r requirements.txt
-   ```
-3. Ensure model paths in the scripts match your local files.
-
-## Usage
-
-### Run the main workflow
-```sh
-python main.py
+```bash
+git clone https://github.com/UCL-ELEC0141-26/assignment-new-agupta1024.git path/to/project
+cd path/to/project
 ```
 
-### Run generation and analysis
-```sh
-python generation.py
+2. Create and activate a Python environment (recommended):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+# or if you use conda
+# conda env create -f environment.yml
+# conda activate <env-name>
+```
+3. Run the entry point:
+
+```bash
+python3 main.py
+```
+
+## Project layout
+
+```
+assignment-new-agupta1024/
+│
+├── main.py                          # primary entry point for training, unlearning, and evaluation
+├── requirements.txt                 # Python package dependencies
+├── environment.yml                  # Conda environment specification
+│
+├── src/
+│   ├── model/                       # model construction and training helpers
+│   │	├── builder.py
+│   │	└── train.py
+│   ├── dataset                      # dataset loading, tokenisation, and collators
+│   │	└── dataset.py
+│   └── analysis/                    # evaluation, generation, and reporting utilities
+│   	├── evaluation.py
+│   	└── generation.py
+├── oracle_adapter_hf/               # Oracle LoRA weights
+├── student_model/                   # Student LoRA weights
+└── data/TOFU                        # Downloaded dataset   
 ```
 
 ## Notes
 
-- The scripts assume access to a compatible Hugging Face model checkpoint.
-- `generation.py` uses an 8-bit quantized base model and a LoRA adapter.
-- Update paths such as `./Lora_model/...` and `./oracle_adapter_hf` as needed.
-
-## Requirements
-
-- Python 3.10+
-- PyTorch
-- Transformers
-- PEFT
-- Datasets
-- bitsandbytes
-- wandb
+- The repository is designed to be reproducible and script-driven.
+- Evaluation outputs are saved under `results/`.
+- The code targets the TOFU unlearning setup used in the assignment.
